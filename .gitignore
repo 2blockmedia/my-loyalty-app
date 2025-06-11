@@ -25,3 +25,9 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+# Environment file
+.env
+
+# Build output (for Vite or CRA)
+dist/
+build/
