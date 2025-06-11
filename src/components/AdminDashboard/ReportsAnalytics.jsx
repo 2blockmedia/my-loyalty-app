@@ -324,12 +324,12 @@ const ReportsAnalytics = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Customer Visits */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
           <h2 className="text-lg font-medium mb-4">Daily Customer Visits</h2>
           <BarChart data={visitsData} color="blue" />
         </div>
         {/* Daily Points Issued */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
           <h2 className="text-lg font-medium mb-4">Daily Points Issued</h2>
           <BarChart data={pointsData} color="green" />
         </div>
@@ -480,20 +480,32 @@ function SummaryCard({ label, value, sub1, sub2 }) {
 function BarChart({ data, color }) {
   if (!data.length) return <div className="text-gray-400 text-center mt-8">No data</div>;
   const max = Math.max(...data.map(d => d.count), 1);
+  // Minimum bar width for readability
+  const minBarWidth = 32;
+  const chartWidth = Math.max(data.length * minBarWidth, 0);
+
   return (
-    <div className="h-64 flex items-end gap-1">
-      {data.map((item, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center">
-          <div
-            className={`w-full bg-${color}-500 rounded-t`}
-            style={{
-              height: `${(item.count / max) * 100}%`,
-              minHeight: 2
-            }}
-          ></div>
-          <div className="text-[10px] mt-1">{item.date.split('-').slice(1).join('/')}</div>
-        </div>
-      ))}
+    <div style={{ overflowX: 'auto', width: '100%' }}>
+      <div
+        className="h-64 flex items-end gap-1"
+        style={{
+          minWidth: chartWidth,
+        }}
+      >
+        {data.map((item, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center min-w-[28px]">
+            <div
+              className={`w-full rounded-t`}
+              style={{
+                backgroundColor: color === 'blue' ? '#3b82f6' : '#22c55e',
+                height: `${(item.count / max) * 100}%`,
+                minHeight: 2,
+              }}
+            ></div>
+            <div className="text-[10px] mt-1 whitespace-nowrap">{item.date.split('-').slice(1).join('/')}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

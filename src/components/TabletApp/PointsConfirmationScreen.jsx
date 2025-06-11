@@ -210,6 +210,7 @@ const PointsConfirmationScreen = () => {
 
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
+      {/* Left: Info & Rewards */}
       <div className="flex-1 overflow-y-auto p-6 bg-white">
         <h1 className="text-4xl font-bold mb-4">Welcome, {currentCustomer.firstName || 'Customer'}!</h1>
         <p className="text-gray-700 mb-6">
@@ -248,6 +249,7 @@ const PointsConfirmationScreen = () => {
         </div>
       </div>
 
+      {/* Right: Keypad & Actions */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
         {successMsg && (
           <div className="bg-green-100 text-green-800 p-4 rounded mb-4">

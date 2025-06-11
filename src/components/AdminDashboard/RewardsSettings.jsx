@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import Button from '../shared/Button';
 import { supabase } from '../../lib/supabaseClient';
@@ -24,6 +24,11 @@ const RewardsSettings = () => {
     redemptionLimit: null,
     requiresApproval: false,
   });
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiIdea, setAiIdea] = useState('');
+  const aiModalRef = useRef();
 
   if (!business || !business.settings) {
     return <div className="p-6 text-gray-600">Loading business settings...</div>;
@@ -117,11 +122,69 @@ const RewardsSettings = () => {
     setIsModalOpen(true);
   };
 
+  const handleAIGenerateReward = async () => {
+    setAiLoading(true);
+    setAiError('');
+    setAiIdea('');
+    try {
+      // Replace this with your actual AI API call
+      // Example: const response = await fetch('/api/ai-reward-idea');
+      // const data = await response.json();
+      // setAiIdea(data.idea);
+
+      // Demo/mock idea:
+      await new Promise(r => setTimeout(r, 1200));
+      setAiIdea("Buy 5 drinks, get a free pastry! Encourage repeat visits by rewarding loyal customers with a tasty treat after multiple purchases.");
+    } catch (e) {
+      setAiError('Failed to generate idea. Please try again.');
+    }
+    setAiLoading(false);
+  };
+
+  const handleUseAIIdea = () => {
+    setRewardForm({
+      ...rewardForm,
+      name: 'Free Pastry After 5 Drinks',
+      description: aiIdea,
+      pointsCost: 50,
+      isActive: true,
+    });
+    setIsModalOpen(true);
+    setAiIdea('');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Rewards</h1>
-        <Button primary onClick={() => setIsModalOpen(true)}>Create New Reward</Button>
+        <div className="flex gap-2">
+          <Button primary onClick={() => setIsModalOpen(true)}>Create New Reward</Button>
+          <Button
+            onClick={() => aiModalRef.current.showModal()}
+            className={`
+              relative overflow-hidden
+              bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600
+              text-white font-semibold
+              transition-all duration-300
+              hover:from-indigo-600 hover:via-blue-700 hover:to-purple-700
+              focus:ring-2 focus:ring-indigo-400
+              px-4 py-2 rounded
+              shadow
+              group
+              animate-ai-glow-btn
+            `}
+            style={{ minWidth: 170, boxShadow: '0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08)' }}
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              {/* Animated AI icon (sparkle/brain style) */}
+              <svg className="w-5 h-5 animate-ai-glow-icon text-white" fill="none" viewBox="0 0 24 24">
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              AI Reward Idea
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -260,25 +323,52 @@ const RewardsSettings = () => {
           <h2 className="text-xl font-bold mb-4">{selectedReward ? 'Edit Reward' : 'Create Reward'}</h2>
           {/* Example form fields, you can expand as needed */}
           <div className="space-y-3">
-            <input
-              className="border rounded px-3 py-2 w-full"
-              placeholder="Reward Name"
-              value={rewardForm.name}
-              onChange={e => setRewardForm({ ...rewardForm, name: e.target.value })}
-            />
-            <textarea
-              className="border rounded px-3 py-2 w-full"
-              placeholder="Description"
-              value={rewardForm.description}
-              onChange={e => setRewardForm({ ...rewardForm, description: e.target.value })}
-            />
-            <input
-              className="border rounded px-3 py-2 w-full"
-              type="number"
-              placeholder="Points Cost"
-              value={rewardForm.pointsCost}
-              onChange={e => setRewardForm({ ...rewardForm, pointsCost: Number(e.target.value) })}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reward Name
+              <input
+                className="border rounded px-3 py-2 w-full mt-1"
+                placeholder="Reward Name"
+                value={rewardForm.name}
+                onChange={e => setRewardForm({ ...rewardForm, name: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reward Description
+              <textarea
+                className="border rounded px-3 py-2 w-full mt-1"
+                placeholder="Description"
+                value={rewardForm.description}
+                onChange={e => setRewardForm({ ...rewardForm, description: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Points Required
+              <input
+                className="border rounded px-3 py-2 w-full mt-1"
+                type="number"
+                placeholder="Points Cost"
+                value={rewardForm.pointsCost}
+                onChange={e => setRewardForm({ ...rewardForm, pointsCost: Number(e.target.value) })}
+              />
+            </label>
+            <label className="flex items-center space-x-2 mt-2">
+              <span className="text-sm font-medium text-gray-700">Active</span>
+              <button
+                type="button"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  rewardForm.isActive ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+                onClick={() => setRewardForm({ ...rewardForm, isActive: !rewardForm.isActive })}
+                aria-pressed={rewardForm.isActive}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    rewardForm.isActive ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="ml-2 text-xs">{rewardForm.isActive ? 'Active' : 'Inactive'}</span>
+            </label>
             {/* Add more fields as needed */}
           </div>
           <div className="flex justify-end space-x-2 mt-4">
@@ -287,37 +377,36 @@ const RewardsSettings = () => {
               primary
               onClick={async () => {
                 setFormLoading(true);
+                // Convert empty date strings to null
+                const cleanForm = { ...rewardForm };
+                if (!cleanForm.startDate) cleanForm.startDate = null;
+                if (!cleanForm.endDate) cleanForm.endDate = null;
+
+                let error;
                 if (selectedReward) {
                   // Edit existing reward
-                  const { error } = await supabase
+                  ({ error } = await supabase
                     .from('rewards')
-                    .update(rewardForm)
-                    .eq('id', selectedReward.id);
-                  setFormLoading(false);
-                  if (!error) {
-                    const { data: updatedRewards } = await supabase.from('rewards').select('*');
-                    setRewards(updatedRewards);
-                    setIsModalOpen(false);
-                  } else {
-                    setError(error.message || 'Failed to update reward.');
-                  }
+                    .update(cleanForm)
+                    .eq('id', selectedReward.id));
                 } else {
                   // Create new reward
-                  // Convert empty date strings to null
-                  const cleanForm = { ...rewardForm };
-                  if (!cleanForm.startDate) cleanForm.startDate = null;
-                  if (!cleanForm.endDate) cleanForm.endDate = null;
-                  const { error } = await supabase
+                  ({ error } = await supabase
                     .from('rewards')
-                    .insert([cleanForm]);
-                  setFormLoading(false);
-                  if (!error) {
-                    const { data: updatedRewards } = await supabase.from('rewards').select('*');
-                    setRewards(updatedRewards);
-                    setIsModalOpen(false);
-                  } else {
-                    setError(error.message || 'Failed to create reward.');
-                  }
+                    .insert([cleanForm]));
+                }
+
+                setFormLoading(false);
+
+                if (!error) {
+                  const { data: updatedRewards } = await supabase.from('rewards').select('*');
+                  setRewards(updatedRewards);
+                  setIsModalOpen(false); // <-- CLOSE MODAL ON SUCCESS
+                  setSelectedReward(null);
+                  setSuccessMsg(selectedReward ? 'Reward updated.' : 'Reward created.');
+                  setTimeout(() => setSuccessMsg(''), 1500);
+                } else {
+                  setError(error.message || 'Failed to save reward.');
                 }
               }}
               disabled={formLoading}
@@ -328,8 +417,113 @@ const RewardsSettings = () => {
         </div>
       </div>
     )}
+
+    {/* AI Modal */}
+    <dialog ref={aiModalRef} className="rounded-lg p-0 w-full max-w-lg">
+      <form method="dialog" className="bg-white rounded-lg p-6">
+        <h2 className="text-lg font-bold mb-2">AI Reward Idea Generator</h2>
+        <p className="mb-4 text-gray-600">Let AI suggest a creative, effective reward for your business.</p>
+        <Button
+          onClick={handleAIGenerateReward}
+          disabled={aiLoading}
+          className={`
+            mb-3 flex items-center gap-2 justify-center
+            relative overflow-hidden
+            bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-600
+            text-white font-semibold
+            transition-all duration-300
+            shadow-lg
+            border-0
+            px-5 py-2 rounded
+            focus:ring-2 focus:ring-indigo-400
+            animate-ai-glow-btn
+          `}
+          style={{
+            boxShadow: '0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08)',
+          }}
+        >
+          {/* Animated brain icon */}
+          <svg
+            className={`w-5 h-5 ${aiLoading ? 'animate-spin-fast' : 'animate-brain-gradient'} brain-gradient`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <defs>
+              <linearGradient id="brainGradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#6366f1">
+                  <animate attributeName="stop-color" values="#6366f1;#a21caf;#6366f1" dur="2s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="1" stopColor="#a21caf">
+                  <animate attributeName="stop-color" values="#a21caf;#6366f1;#a21caf" dur="2s" repeatCount="indefinite" />
+                </stop>
+              </linearGradient>
+            </defs>
+            <path
+              d="M9 3a3 3 0 0 0-3 3v1.5A2.5 2.5 0 0 0 3 10v1a2.5 2.5 0 0 0 2 2.45V15a3 3 0 0 0 3 3h1m2-15a3 3 0 0 1 3 3v1.5A2.5 2.5 0 0 1 21 10v1a2.5 2.5 0 0 1-2 2.45V15a3 3 0 0 1-3 3h-1"
+              stroke="url(#brainGradient)"
+              fill="none"
+            />
+            <circle cx="9" cy="10" r="1" fill="url(#brainGradient)" />
+            <circle cx="15" cy="10" r="1" fill="url(#brainGradient)" />
+          </svg>
+          {aiLoading ? 'Generating...' : 'Generate Reward Idea'}
+        </Button>
+        {aiError && <div className="text-red-600 mb-2">{aiError}</div>}
+        {aiIdea && (
+          <div className="bg-gray-100 rounded p-3 mb-3">
+            <div className="mb-2 text-gray-800">{aiIdea}</div>
+            <Button onClick={handleUseAIIdea} className="mt-1" type="button">
+              Use This Idea
+            </Button>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => aiModalRef.current.close()}>Close</Button>
+        </div>
+      </form>
+    </dialog>
   </div>
   );
 };
 
 export default RewardsSettings;
+
+<style>
+{`
+  @keyframes ai-glow {
+    0%, 100% { filter: blur(0px) brightness(1); }
+    50% { filter: blur(2px) brightness(1.3); }
+  }
+  .animate-ai-glow {
+    animation: ai-glow 2s infinite;
+  }
+  @keyframes ai-glow-icon {
+    0%, 100% { filter: drop-shadow(0 0 0px #a5b4fc); }
+    50% { filter: drop-shadow(0 0 8px #818cf8); }
+  }
+  .animate-ai-glow-icon {
+    animation: ai-glow-icon 1.5s infinite;
+  }
+  @keyframes brain-gradient {
+    0%,100% { filter: drop-shadow(0 0 0px #6366f1);}
+    50% { filter: drop-shadow(0 0 8px #a21caf);}
+  }
+  .animate-brain-gradient {
+    animation: brain-gradient 2s infinite;
+  }
+  .animate-spin-fast {
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes ai-glow-btn {
+    0%,100% { box-shadow: 0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08);}
+    50% { box-shadow: 0 0 32px 8px #a21caf, 0 2px 4px rgba(0,0,0,0.08);}
+  }
+  .animate-ai-glow-btn {
+    animation: ai-glow-btn 2s infinite;
+  }
+`}
+</style>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import Button from '../shared/Button';
 import { mockCampaigns, mockSegments } from '../../data/mockData';
@@ -15,12 +15,18 @@ const PromotionsManagement = () => {
     type: 'SMS',
     segmentId: '',
     messageTemplate: '',
-    scheduledDate: '',
-    rewardId: ''
+    rewardId: '',
+    scheduleStartDate: '',
+    scheduleEndDate: ''
   });
   const [previewMessage, setPreviewMessage] = useState('');
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiIdea, setAiIdea] = useState('');
+  const [sendLater, setSendLater] = useState(false);
+  const aiModalRef = useRef();
   
   // Apply sorting to campaigns
   const sortedCampaigns = [...campaigns].sort((a, b) => {
@@ -68,8 +74,9 @@ const PromotionsManagement = () => {
       type: 'SMS',
       segmentId: segments[0]?.id || '',
       messageTemplate: '',
-      scheduledDate: '',
-      rewardId: ''
+      rewardId: '',
+      scheduleStartDate: '',
+      scheduleEndDate: ''
     });
     setPreviewMessage('');
     setIsModalOpen(true);
@@ -84,8 +91,9 @@ const PromotionsManagement = () => {
       type: campaign.type || 'SMS',
       segmentId: campaign.segmentId || '',
       messageTemplate: campaign.messageTemplate || '',
-      scheduledDate: campaign.scheduledDate ? campaign.scheduledDate.split('T')[0] : '',
-      rewardId: campaign.rewardId || ''
+      rewardId: campaign.rewardId || '',
+      scheduleStartDate: campaign.scheduleStartDate ? campaign.scheduleStartDate.split('T')[0] : '',
+      scheduleEndDate: campaign.scheduleEndDate ? campaign.scheduleEndDate.split('T')[0] : ''
     });
     updatePreviewMessage(campaign.messageTemplate);
     setIsModalOpen(true);
@@ -148,6 +156,11 @@ const PromotionsManagement = () => {
       return;
     }
     
+    if (sendLater && (!campaignForm.scheduleStartDate || !campaignForm.scheduleEndDate)) {
+      setError('Please select both a start and end date/time for scheduling.');
+      return;
+    }
+    
     if (selectedCampaign) {
       // Update existing campaign
       setCampaigns(prev => prev.map(c => {
@@ -159,9 +172,9 @@ const PromotionsManagement = () => {
             type: campaignForm.type,
             segmentId: campaignForm.segmentId,
             messageTemplate: campaignForm.messageTemplate,
-            scheduledDate: campaignForm.scheduledDate ? new Date(campaignForm.scheduledDate).toISOString() : null,
             rewardId: campaignForm.rewardId || null,
-            status: campaignForm.scheduledDate && new Date(campaignForm.scheduledDate) > new Date() ? 'SCHEDULED' : 'DRAFT',
+            scheduleStartDate: campaignForm.scheduleStartDate ? new Date(campaignForm.scheduleStartDate).toISOString() : null,
+            scheduleEndDate: campaignForm.scheduleEndDate ? new Date(campaignForm.scheduleEndDate).toISOString() : null,
             updatedAt: new Date().toISOString()
           };
         }
@@ -179,14 +192,14 @@ const PromotionsManagement = () => {
         type: campaignForm.type,
         segmentId: campaignForm.segmentId,
         messageTemplate: campaignForm.messageTemplate,
-        status: campaignForm.scheduledDate && new Date(campaignForm.scheduledDate) > new Date() ? 'SCHEDULED' : 'DRAFT',
-        scheduledDate: campaignForm.scheduledDate ? new Date(campaignForm.scheduledDate).toISOString() : null,
+        rewardId: campaignForm.rewardId || null,
+        scheduleStartDate: campaignForm.scheduleStartDate ? new Date(campaignForm.scheduleStartDate).toISOString() : null,
+        scheduleEndDate: campaignForm.scheduleEndDate ? new Date(campaignForm.scheduleEndDate).toISOString() : null,
         recipientCount: segment?.customerCount || 0,
         sentCount: 0,
         deliveredCount: 0,
         openedCount: 0,
         clickedCount: 0,
-        rewardId: campaignForm.rewardId || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -281,11 +294,63 @@ const PromotionsManagement = () => {
     }
   };
 
+  // AI handler for promotion idea
+  const handleAIGeneratePromotion = async () => {
+    setAiLoading(true);
+    setAiError('');
+    setAiIdea('');
+    try {
+      // Hardcoded idea for now
+      await new Promise(r => setTimeout(r, 800));
+      setAiIdea(
+        "Flash Friday: Offer double loyalty points for all purchases made this Friday only! Encourage customers to visit and boost engagement with a limited-time bonus."
+      );
+    } catch (e) {
+      setAiError('Failed to generate idea. Please try again.');
+    }
+    setAiLoading(false);
+  };
+
+  const handleUseAIPromotion = () => {
+    setCampaignForm({
+      ...campaignForm,
+      name: aiIdea.split('\n')[0] || '',
+      description: aiIdea,
+      messageTemplate: aiIdea,
+    });
+    setIsModalOpen(true);
+    setAiIdea('');
+    aiModalRef.current.close();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Promotions & Campaigns</h1>
-        <div className="mt-2 sm:mt-0">
+        <div className="mt-2 sm:mt-0 flex gap-2">
+          <Button
+            className={`
+              relative overflow-hidden
+              bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600
+              text-white font-semibold
+              transition-all duration-300
+              hover:from-indigo-600 hover:via-blue-700 hover:to-purple-700
+              focus:ring-2 focus:ring-indigo-400
+              px-4 py-2 rounded
+              shadow
+              group
+            `}
+            style={{ minWidth: 170 }}
+            onClick={() => aiModalRef.current.showModal()}
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              <svg className="w-5 h-5 animate-ai-glow-icon text-white" fill="none" viewBox="0 0 24 24">
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              AI Promotion Idea
+            </span>
+          </Button>
           <Button primary onClick={handleCreateCampaign}>
             Create Campaign
           </Button>
@@ -465,10 +530,10 @@ const PromotionsManagement = () => {
       {/* Campaign Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-medium text-gray-900">
-                {selectedCampaign ? 'Edit Campaign' : 'Create New Campaign'}
+                {selectedCampaign ? 'Edit Promotion' : 'Create a Promotion'}
               </h3>
               <button 
                 className="text-gray-400 hover:text-gray-500"
@@ -479,169 +544,232 @@ const PromotionsManagement = () => {
                 </svg>
               </button>
             </div>
-            
             <form onSubmit={handleSubmit}>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Campaign Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={campaignForm.name}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Summer Promotion, Loyalty Reminder, etc."
-                      required
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={campaignForm.description}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Briefly describe the purpose of this campaign"
-                      rows="2"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                      Message Type *
-                    </label>
-                    <select
-                      id="type"
-                      name="type"
-                      value={campaignForm.type}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="SMS">SMS Message</option>
-                      <option value="EMAIL" disabled>Email (Coming Soon)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="segmentId" className="block text-sm font-medium text-gray-700 mb-1">
-                      Customer Segment *
-                    </label>
-                    <select
-                      id="segmentId"
-                      name="segmentId"
-                      value={campaignForm.segmentId}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Select a segment</option>
-                      {segments.map(segment => (
-                        <option key={segment.id} value={segment.id}>
-                          {segment.name} ({segment.customerCount} customers)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label htmlFor="messageTemplate" className="block text-sm font-medium text-gray-700 mb-1">
-                      Message Template *
-                    </label>
-                    <textarea
-                      id="messageTemplate"
-                      name="messageTemplate"
-                      value={campaignForm.messageTemplate}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Hello {{firstName}}, thank you for being our loyal customer!"
-                      rows="4"
-                      required
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Use {'{{firstName}}'}, {'{{lastName}}'}, and {'{{points}}'} as placeholders for personalization.
+              <div className="p-6 space-y-6">
+                {/* Offer Description */}
+                <div>
+                  <h4 className="font-semibold text-base mb-1">Create a promotion</h4>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Offer description (include any restrictions)
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={campaignForm.name}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="ie. 10% off your next visit"
+                    maxLength={50}
+                    required
+                  />
+                  <div className="text-xs text-gray-400 text-right">{campaignForm.name.length}/50</div>
+                </div>
 
-                    </p>
+                {/* When is this offer valid? */}
+                <div>
+                  <h4 className="font-semibold text-base mb-1">When is this offer valid?</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="scheduleStartDate" className="block text-sm font-medium text-gray-700 mb-1">
+                        Start
+                      </label>
+                      <input
+                        type="date"
+                        id="scheduleStartDate"
+                        name="scheduleStartDate"
+                        value={campaignForm.scheduleStartDate}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="scheduleEndDate" className="block text-sm font-medium text-gray-700 mb-1">
+                        End
+                      </label>
+                      <input
+                        type="date"
+                        id="scheduleEndDate"
+                        name="scheduleEndDate"
+                        value={campaignForm.scheduleEndDate}
+                        onChange={handleInputChange}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
                   </div>
-                  
-                  {previewMessage && (
-                    <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Message Preview:</h4>
-                      <p className="text-sm">{previewMessage}</p>
+                  <div className="text-xs text-gray-400 mt-1">Can be valid up to 30 days.</div>
+                </div>
+
+                {/* Message */}
+                <div>
+                  <h4 className="font-semibold text-base mb-1">What's the occasion?</h4>
+                  <label htmlFor="messageTemplate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Message
+                  </label>
+                  <textarea
+                    id="messageTemplate"
+                    name="messageTemplate"
+                    value={campaignForm.messageTemplate}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder='ie. "Celebrate our grand opening!"'
+                    maxLength={145}
+                    rows={3}
+                    required
+                  />
+                  <div className="text-xs text-gray-400 text-right">{campaignForm.messageTemplate.length}/145</div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Text will only be displayed to the customer, not on the POS. Links will be shortened.
+                  </p>
+                </div>
+
+                {/* Send time */}
+                <div>
+                  <h4 className="font-semibold text-base mb-1">When would you like to send your promotion?</h4>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center p-2 border rounded-lg cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sendTimeOption"
+                        checked={!sendLater}
+                        onChange={() => setSendLater(false)}
+                        className="mr-2"
+                      />
+                      Send immediately
+                    </label>
+                    <label className="flex items-center p-2 border rounded-lg cursor-pointer">
+                      <input
+                        type="radio"
+                        name="sendTimeOption"
+                        checked={sendLater}
+                        onChange={() => setSendLater(true)}
+                        className="mr-2"
+                      />
+                      Schedule for later
+                    </label>
+                  </div>
+                  {sendLater && (
+                    <div className="mt-3">
+                      <label htmlFor="scheduledDateTime" className="block text-sm font-medium text-gray-700 mb-1">
+                        Scheduled Date & Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="scheduledDateTime"
+                        name="scheduledDateTime"
+                        value={campaignForm.scheduledDateTime || ''}
+                        onChange={e => setCampaignForm(prev => ({ ...prev, scheduledDateTime: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required={sendLater}
+                      />
                     </div>
                   )}
-                  
-                  <div>
-                    <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 mb-1">
-                      Schedule Date (Optional)
-                    </label>
-                    <input
-                      type="datetime-local"
-                      id="scheduledDate"
-                      name="scheduledDate"
-                      value={campaignForm.scheduledDate}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Leave blank to save as draft.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="rewardId" className="block text-sm font-medium text-gray-700 mb-1">
-                      Linked Reward (Optional)
-                    </label>
-                    <select
-                      id="rewardId"
-                      name="rewardId"
-                      value={campaignForm.rewardId || ''}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">No linked reward</option>
-                      <option value="reward_001">Free Coffee</option>
-                      <option value="reward_002">50% Off Pastry</option>
-                      <option value="reward_004">Summer Special: Iced Drink</option>
-                    </select>
-                  </div>
+                  {/* Heads up warning */}
+                  {sendLater && campaignForm.scheduledDateTime && (() => {
+                    const hour = campaignForm.scheduledDateTime ? new Date(campaignForm.scheduledDateTime).getHours() : null;
+                    return (hour < 9 || hour > 21) ? (
+                      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-2 rounded text-yellow-800 text-sm flex items-start gap-2">
+                        <svg className="w-5 h-5 mt-0.5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h1m0-4h-1m1 8h1m-1 4h1m-4-4h1m-4 0h1m-4 0h1m0-4h1m4-4h1m4 0h1m4 0h1m0 4h1m-4 4h1m-4 0h1m-4 0h1m0-4h1" />
+                        </svg>
+                        <span>
+                          <strong>Heads up!</strong> Your promotion is set to send at an off-hours time. Promotions can be sent from 9 AM to 10 PM. If you send a promotion now, some members may not receive it until 9 AM the following morning.
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
-                
-                {error && (
-                  <div className="text-red-500 text-sm">
-                    {error}
-                  </div>
-                )}
               </div>
-              
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-between">
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
                 <Button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
+                  className="mr-2"
                 >
                   Cancel
                 </Button>
-                <div className="space-x-2">
-                  {!campaignForm.scheduledDate && (
-                    <Button
-                      type="submit"
-                    >
-                      Save as Draft
-                    </Button>
-                  )}
-                  <Button type="submit" primary>
-                    {campaignForm.scheduledDate ? 'Schedule Campaign' : 'Save & Send Now'}
-                  </Button>
-                </div>
+                <Button type="submit" primary>
+                  {sendLater ? 'Schedule Promotion' : 'Send Now'}
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
+      
+      {/* AI Promotion Modal */}
+      <dialog ref={aiModalRef} className="rounded-lg p-0 w-full max-w-lg">
+        <form method="dialog" className="bg-white rounded-lg p-6">
+          <h2 className="text-lg font-bold mb-2">AI Promotion Idea Generator</h2>
+          <p className="mb-4 text-gray-600">Let AI suggest a creative, effective promotion for your business.</p>
+          <Button
+            onClick={handleAIGeneratePromotion}
+            disabled={aiLoading}
+            className={`
+              mb-3 flex items-center gap-2 justify-center
+              relative overflow-hidden
+              bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-600
+              text-white font-semibold
+              transition-all duration-300
+              shadow-lg
+              border-0
+              px-5 py-2 rounded
+              focus:ring-2 focus:ring-indigo-400
+              animate-ai-glow-btn
+            `}
+            style={{
+              boxShadow: '0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08)',
+            }}
+          >
+            <svg
+              className={`w-5 h-5 ${aiLoading ? 'animate-spin-fast' : 'animate-ai-glow-icon'} text-white`}
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            {aiLoading ? 'Generating...' : 'Generate Promotion Idea'}
+          </Button>
+          {aiError && <div className="text-red-600 mb-2">{aiError}</div>}
+          {aiIdea && (
+            <div className="bg-gray-100 rounded p-3 mb-3">
+              <div className="mb-2 text-gray-800">{aiIdea}</div>
+              <Button onClick={handleUseAIPromotion} className="mt-1" type="button">
+                Use This Idea
+              </Button>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => aiModalRef.current.close()}>Close</Button>
+          </div>
+        </form>
+      </dialog>
+
+      {/* Add this to your global CSS or in a <style jsx global> block if using styled-jsx: */}
+      <style>
+      {`
+        @keyframes ai-glow-icon {
+          0%, 100% { filter: drop-shadow(0 0 0px #a5b4fc); }
+          50% { filter: drop-shadow(0 0 8px #818cf8); }
+        }
+        .animate-ai-glow-icon {
+          animation: ai-glow-icon 1.5s infinite;
+        }
+        @keyframes ai-glow-btn {
+          0%,100% { box-shadow: 0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08);}
+          50% { box-shadow: 0 0 32px 8px #a21caf, 0 2px 4px rgba(0,0,0,0.08);}
+        }
+        .animate-ai-glow-btn {
+          animation: ai-glow-btn 2s infinite;
+        }
+        .animate-spin-fast {
+          animation: spin 0.7s linear infinite;
+        }
+      `}
+      </style>
     </div>
   );
 };
