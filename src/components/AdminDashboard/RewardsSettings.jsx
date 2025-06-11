@@ -155,36 +155,34 @@ const RewardsSettings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Rewards</h1>
-        <div className="flex gap-2">
-          <Button primary onClick={() => setIsModalOpen(true)}>Create New Reward</Button>
-          <Button
-            onClick={() => aiModalRef.current.showModal()}
-            className={`
-              relative overflow-hidden
-              bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600
-              text-white font-semibold
-              transition-all duration-300
-              hover:from-indigo-600 hover:via-blue-700 hover:to-purple-700
-              focus:ring-2 focus:ring-indigo-400
-              px-4 py-2 rounded
-              shadow
-              group
-              animate-ai-glow-btn
-            `}
-            style={{ minWidth: 170, boxShadow: '0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08)' }}
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              {/* Animated AI icon (sparkle/brain style) */}
-              <svg className="w-5 h-5 animate-ai-glow-icon text-white" fill="none" viewBox="0 0 24 24">
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              AI Reward Idea
-            </span>
-          </Button>
-        </div>
+      <h1 className="text-2xl font-bold mb-3">Rewards</h1>
+      <div className="flex gap-2 mb-6">
+        <Button primary onClick={() => setIsModalOpen(true)}>Create New Reward</Button>
+        <Button
+          onClick={() => aiModalRef.current.showModal()}
+          className={`
+            relative overflow-hidden
+            bg-gradient-to-r from-indigo-500 via-blue-600 to-purple-600
+            text-white font-semibold
+            transition-all duration-300
+            hover:from-indigo-600 hover:via-blue-700 hover:to-purple-700
+            focus:ring-2 focus:ring-indigo-400
+            px-4 py-2 rounded
+            shadow
+            group
+            animate-ai-glow-btn
+          `}
+          style={{ minWidth: 170, boxShadow: '0 0 16px 2px #818cf8, 0 2px 4px rgba(0,0,0,0.08)' }}
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            {/* Animated AI icon (sparkle/brain style) */}
+            <svg className="w-5 h-5 animate-ai-glow-icon text-white" fill="none" viewBox="0 0 24 24">
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            AI Reward Idea
+          </span>
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-4">
